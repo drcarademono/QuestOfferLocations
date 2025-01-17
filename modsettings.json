@@ -1,5 +1,5 @@
 {
-    "Version": "0.3.0",
+    "Version": "1.1.0",
     "Sections": [
         {
             "Name": "LocationSettings",
@@ -28,6 +28,40 @@
                     "Value": 3,
                     "Name": "MaxSearchTimeInSeconds",
                     "Description": "Maximum time to search for nearby quests, when Prefer Nearby Quests is true",
+                    "$version": "v1",
+                    "$type": "DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings.SliderIntKey"
+                },
+                {
+                    "Value": false,
+                    "Name": "LimitGuildQuests",
+                    "Description": "Set this to limit the number of quests that guilds offer in any given location",
+                    "$version": "v1",
+                    "$type": "DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings.ToggleKey"
+                },
+                {
+                    "Min": 1,
+                    "Max": 10,
+                    "Value": 1,
+                    "Name": "LimitVillageQuests",
+                    "Description": "Max number of quests offered by guilds in villages, when Limit Guild Quests is true",
+                    "$version": "v1",
+                    "$type": "DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings.SliderIntKey"
+                },
+                {
+                    "Min": 1,
+                    "Max": 10,
+                    "Value": 3,
+                    "Name": "LimitTownQuests",
+                    "Description": "Max number of quests offered by guilds in towns, when Limit Guild Quests is true",
+                    "$version": "v1",
+                    "$type": "DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings.SliderIntKey"
+                },
+                {
+                    "Min": 1,
+                    "Max": 10,
+                    "Value": 5,
+                    "Name": "LimitCityQuests",
+                    "Description": "Max number of quests offered by guilds in cities, when Limit Guild Quests is true",
                     "$version": "v1",
                     "$type": "DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings.SliderIntKey"
                 }

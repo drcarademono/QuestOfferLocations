@@ -12,6 +12,10 @@ namespace Assets.Scripts.Game.UserInterfaceWindows
         public static bool preferNearbyQuests;
         public static float maxTravelDistanceInDays;
         public static int maxSearchTimeInSeconds;
+        public static bool limitGuildQuestions;
+        public static int limitVillageQuests;
+        public static int limitTownQuests;
+        public static int limitCityQuests;
 
         public void Awake()
         {
@@ -47,6 +51,10 @@ namespace Assets.Scripts.Game.UserInterfaceWindows
             preferNearbyQuests = settings.GetBool("LocationSettings", "PreferNearbyQuests");
             maxTravelDistanceInDays = settings.GetFloat("LocationSettings", "MaxTravelDistanceInDays");
             maxSearchTimeInSeconds = settings.GetInt("LocationSettings", "MaxSearchTimeInSeconds");
+            limitGuildQuestions = settings.GetBool("LocationSettings", "LimitGuildQuests");
+            limitVillageQuests = settings.GetInt("LocationSettings", "LimitVillageQuests");
+            limitTownQuests = settings.GetInt("LocationSettings", "LimitTownQuests");
+            limitCityQuests = settings.GetInt("LocationSettings", "LimitCityQuests");
 
             // Register the save data handler
             mod.SaveDataInterface = QuestOfferLocationSaveDataHandler.Instance;

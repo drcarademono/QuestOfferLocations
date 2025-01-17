@@ -27,7 +27,9 @@ public class QuestOfferLocationSaveDataHandler : IHasModSaveData
     {
         return new QuestOfferLocationSaveData
         {
-            npcQuestOffers = new Dictionary<int, int>()
+            npcQuestOffers = new Dictionary<int, int>(),
+            npcQuestOfferNames = new Dictionary<int, List<string>>(),
+            npcLastQuestOfferDate = new Dictionary<int, (int day, int year)>()
         };
     }
 
@@ -35,7 +37,9 @@ public class QuestOfferLocationSaveDataHandler : IHasModSaveData
     {
         return new QuestOfferLocationSaveData
         {
-            npcQuestOffers = QuestOfferLocationGuildServicePopUpWindow.npcQuestOffers
+            npcQuestOffers = QuestOfferLocationGuildServicePopUpWindow.npcQuestOffers,
+            npcQuestOfferNames = QuestOfferLocationGuildServicePopUpWindow.npcQuestOfferNames,
+            npcLastQuestOfferDate = QuestOfferLocationGuildServicePopUpWindow.npcLastQuestOfferDate
         };
     }
 
@@ -45,6 +49,8 @@ public class QuestOfferLocationSaveDataHandler : IHasModSaveData
         if (data != null)
         {
             QuestOfferLocationGuildServicePopUpWindow.npcQuestOffers = data.npcQuestOffers ?? new Dictionary<int, int>();
+            QuestOfferLocationGuildServicePopUpWindow.npcQuestOfferNames = data.npcQuestOfferNames ?? new Dictionary<int, List<string>>();
+            QuestOfferLocationGuildServicePopUpWindow.npcLastQuestOfferDate = data.npcLastQuestOfferDate ?? new Dictionary<int, (int day, int year)>();
         }
     }
 
@@ -52,5 +58,7 @@ public class QuestOfferLocationSaveDataHandler : IHasModSaveData
     public class QuestOfferLocationSaveData
     {
         public Dictionary<int, int> npcQuestOffers;
+        public Dictionary<int, List<string>> npcQuestOfferNames;
+        public Dictionary<int, (int day, int year)> npcLastQuestOfferDate;
     }
 }

@@ -6,6 +6,7 @@ using DaggerfallConnect;
 using DaggerfallWorkshop.Game.Guilds;
 using Assets.Scripts.Game.UserInterfaceWindows;
 using DaggerfallWorkshop.Game;
+using DaggerfallWorkshop.Utility;
 using System.Collections.Generic;
 
 namespace DaggerfallWorkshop.Game.UserInterfaceWindows
@@ -14,7 +15,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
     {
         public static Dictionary<int, int> npcQuestOffers = new Dictionary<int, int>();
         public static Dictionary<int, List<string>> npcQuestOfferNames = new Dictionary<int, List<string>>();
-
+        public static Dictionary<int, (int day, int year)> npcLastQuestOfferDate = new Dictionary<int, (int day, int year)>();
 
         public int SelectedIndex;
         public NearestQuest NearestQuest;
@@ -198,6 +199,15 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                     }
                     npcQuestOfferNames[npcKey].Add(offeredQuest.QuestName);
 
+                    // **Record the date of this quest offer**
+                    int currentDay = DaggerfallUnity.Instance.WorldTime.Now.DayOfYear;
+                    int currentYear = DaggerfallUnity.Instance.WorldTime.Now.Year;
+                    npcLastQuestOfferDate[npcKey] = (currentDay, currentYear);
+
+                    // Debug message showing the recorded date
+                    Debug.Log($"NPC {npcKey} last offered a quest on day {currentDay} of year {currentYear}.");
+
+
                     // Debug message listing all quest names offered by this NPC
                     string offeredQuestList = string.Join(", ", npcQuestOfferNames[npcKey]);
                     Debug.Log($"NPC {npcKey} has offered the following quests: {offeredQuestList}");
@@ -214,7 +224,44 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         private int GetQuestOffersForNPC(StaticNPC npc)
         {
             int npcKey = npc.Data.hash; // Use a unique identifier for the NPC
-            return npcQuestOffers.TryGetValue(npcKey, out int offers) ? offers : 0;
+            int baseOffers = npcQuestOffers.TryGetValue(npcKey, out int offers) ? offers : 0;
+
+            // Retrieve the last offer date
+            if (npcLastQuestOfferDate.TryGetValue(npcKey, out var lastOfferDate))
+            {
+                int lastDay = lastOfferDate.day;
+                int lastYear = lastOfferDate.year;
+
+                // Calculate weeks since the last quest offer
+                int currentDay = DaggerfallUnity.Instance.WorldTime.Now.DayOfYear;
+                int currentYear = DaggerfallUnity.Instance.WorldTime.Now.Year;
+
+                int daysElapsed = (currentYear - lastYear) * DaggerfallDateTime.DaysPerYear + (currentDay - lastDay);
+                int monthsElapsed = Mathf.FloorToInt(daysElapsed / 30.0f);
+
+                // Reduce the number of offers by monthsElapsed, down to a minimum of zero
+                baseOffers = Mathf.Max(baseOffers - monthsElapsed, 0);
+                npcQuestOffers[npcKey] = baseOffers;
+
+                // Remove oldest quest names from the list as time passes
+                if (npcQuestOfferNames.TryGetValue(npcKey, out var offeredQuestNames) && monthsElapsed > 0)
+                {
+                    int namesToRemove = Mathf.Min(monthsElapsed, offeredQuestNames.Count);
+                    offeredQuestNames.RemoveRange(0, namesToRemove);
+
+                    // Update the dictionary with the pruned list
+                    if (offeredQuestNames.Count == 0)
+                    {
+                        npcQuestOfferNames.Remove(npcKey); // Clean up if no quests remain
+                    }
+                    else
+                    {
+                        npcQuestOfferNames[npcKey] = offeredQuestNames;
+                    }
+                }
+            }
+
+            return baseOffers;
         }
 
         private void SetQuestOffersForNPC(StaticNPC npc, int offers)
