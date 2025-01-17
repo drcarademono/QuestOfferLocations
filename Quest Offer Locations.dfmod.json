@@ -1,0 +1,18 @@
+{
+    "ModTitle": "Quest Offer Locations",
+    "ModVersion": "1.1.0",
+    "ModAuthor": "Macadaynu",
+    "ContactInfo": "DFU Forums",
+    "DFUnity_Version": "1.0.0",
+    "ModDescription": "Show the quest location as part of the quest offer",
+    "GUID": "adc93449-21d7-4ec9-acb5-5337dc20e5a1",
+    "Files": [
+        "Assets/Game/Mods/QuestOfferLocations/QuestOfferLocationsMod.cs",
+        "Assets/Game/Mods/QuestOfferLocations/QuestOfferLocationGuildServicePopUpWindow.cs",
+        "Assets/Game/Mods/QuestOfferLocations/NearestQuest.cs",
+        "Assets/Game/Mods/QuestOfferLocations/modsettings.json",
+        "Assets/Game/Mods/QuestOfferLocations/QuestOfferLocationWindow.cs",
+        "Assets/Game/Mods/QuestOfferLocations/QuestOfferMessageHelper.cs"
+        "Assets/Game/Mods/QuestOfferLocations/QuestOfferLocationSaveDataHandler.cs",
+    ]
+}

@@ -1,0 +1,38 @@
+{
+    "Version": "0.3.0",
+    "Sections": [
+        {
+            "Name": "LocationSettings",
+            "Description": null,
+            "IsAdvanced": false,
+            "Keys": [
+                {
+                    "Value": false,
+                    "Name": "PreferNearbyQuests",
+                    "Description": "Set this to prefer nearby locations for random quest offers",
+                    "$version": "v1",
+                    "$type": "DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings.ToggleKey"
+                },
+                {
+                    "Min": 0.5,
+                    "Max": 8.0,
+                    "Value": 2.0,
+                    "Name": "MaxTravelDistanceInDays",
+                    "Description": "Max travel distance to quest location, when Prefer Nearby Quests is true",
+                    "$version": "v1",
+                    "$type": "DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings.SliderFloatKey"
+                },
+                {
+                    "Min": 1,
+                    "Max": 10,
+                    "Value": 3,
+                    "Name": "MaxSearchTimeInSeconds",
+                    "Description": "Maximum time to search for nearby quests, when Prefer Nearby Quests is true",
+                    "$version": "v1",
+                    "$type": "DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings.SliderIntKey"
+                }
+            ],
+            "$version": "v1"
+        }
+    ]
+}
