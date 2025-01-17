@@ -65,6 +65,13 @@
                     "$version": "v1",
                     "$type": "DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings.SliderIntKey"
                 }
+                {
+                    "Value": false,
+                    "Name": "AvoidRepeatingGuildQuests",
+                    "Description": "If set, guild questors will not repeatedly offer the same quest",
+                    "$version": "v1",
+                    "$type": "DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings.ToggleKey"
+                }
             ],
             "$version": "v1"
         }

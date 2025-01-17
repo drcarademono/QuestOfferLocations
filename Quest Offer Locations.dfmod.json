@@ -12,7 +12,7 @@
         "Assets/Game/Mods/QuestOfferLocations/NearestQuest.cs",
         "Assets/Game/Mods/QuestOfferLocations/modsettings.json",
         "Assets/Game/Mods/QuestOfferLocations/QuestOfferLocationWindow.cs",
-        "Assets/Game/Mods/QuestOfferLocations/QuestOfferMessageHelper.cs"
-        "Assets/Game/Mods/QuestOfferLocations/QuestOfferLocationSaveDataHandler.cs",
+        "Assets/Game/Mods/QuestOfferLocations/QuestOfferMessageHelper.cs",
+        "Assets/Game/Mods/QuestOfferLocations/QuestOfferLocationSaveDataHandler.cs"
     ]
 }

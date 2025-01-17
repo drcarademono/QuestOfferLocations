@@ -40,7 +40,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             int questOffers = GetQuestOffersForNPC(serviceNPC);
 
             // Check if the maximum offers have been reached
-            if (questOffers >= maxQuestsForLocation)
+            if (QuestOfferLocationsMod.limitGuildQuestions && questOffers >= maxQuestsForLocation)
             {
                 ShowFailGetQuestMessage();
                 Debug.Log("ShowFailGetQuestMessage 1");
@@ -52,45 +52,48 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             var timeStart = System.DateTime.Now;
             bool foundUniqueQuest = false;
 
-            while (!foundUniqueQuest)
+            if (QuestOfferLocationsMod.avoidRepeatingGuildQuests)
             {
-                // Check timeout
-                if (System.DateTime.Now.Subtract(timeStart).TotalSeconds >= QuestOfferLocationsMod.maxSearchTimeInSeconds)
+                while (!foundUniqueQuest)
                 {
-                    ShowFailGetQuestMessage();
-                    Debug.Log("ShowFailGetQuestMessage 2");
-                    SetQuestOffersForNPC(serviceNPC, maxQuestsForLocation);
-                    return;
-                }
-
-                // Check if offeredQuest is already on the list of previously offered quests
-                if (npcQuestOfferNames.TryGetValue(npcKey, out var offeredQuestNames) && offeredQuestNames.Contains(offeredQuest.QuestName))
-                {
-                    // Request a new quest
-                    if (DaggerfallUnity.Settings.GuildQuestListBox)
+                    // Check timeout
+                    if (System.DateTime.Now.Subtract(timeStart).TotalSeconds >= QuestOfferLocationsMod.maxSearchTimeInSeconds)
                     {
-                        offeredQuest = GameManager.Instance.QuestListsManager.LoadQuest(questPool[SelectedIndex], serviceNPC.Data.factionID);
+                        ShowFailGetQuestMessage();
+                        Debug.Log("ShowFailGetQuestMessage 2");
+                        SetQuestOffersForNPC(serviceNPC, maxQuestsForLocation);
+                        return;
+                    }
+
+                    // Check if offeredQuest is already on the list of previously offered quests
+                    if (npcQuestOfferNames.TryGetValue(npcKey, out var offeredQuestNames) && offeredQuestNames.Contains(offeredQuest.QuestName))
+                    {
+                        // Request a new quest
+                        if (DaggerfallUnity.Settings.GuildQuestListBox)
+                        {
+                            offeredQuest = GameManager.Instance.QuestListsManager.LoadQuest(questPool[SelectedIndex], serviceNPC.Data.factionID);
+                        }
+                        else
+                        {
+                            offeredQuest = GameManager.Instance.QuestListsManager.GetGuildQuest(
+                                guildGroup,
+                                guildManager.GetGuild(guildGroup).IsMember() ? Questing.MembershipStatus.Member : Questing.MembershipStatus.Nonmember,
+                                guildManager.GetGuild(guildGroup).GetFactionId(),
+                                guildManager.GetGuild(guildGroup).GetReputation(playerEntity),
+                                guildManager.GetGuild(guildGroup).Rank
+                            );
+                            Debug.Log($"New offered quest candidate in foundUniqueQuest loop: {offeredQuest?.QuestName ?? "null"}");
+                        }
+
+                        // If offeredQuest is null, continue to avoid null reference errors
+                        if (offeredQuest == null)
+                            continue;
                     }
                     else
                     {
-                        offeredQuest = GameManager.Instance.QuestListsManager.GetGuildQuest(
-                            guildGroup,
-                            guildManager.GetGuild(guildGroup).IsMember() ? Questing.MembershipStatus.Member : Questing.MembershipStatus.Nonmember,
-                            guildManager.GetGuild(guildGroup).GetFactionId(),
-                            guildManager.GetGuild(guildGroup).GetReputation(playerEntity),
-                            guildManager.GetGuild(guildGroup).Rank
-                        );
-                        Debug.Log($"New offered quest candidate: {offeredQuest?.QuestName ?? "null"}");
+                        // Quest is unique, we can proceed
+                        foundUniqueQuest = true;
                     }
-
-                    // If offeredQuest is null, continue to avoid null reference errors
-                    if (offeredQuest == null)
-                        continue;
-                }
-                else
-                {
-                    // Quest is unique, we can proceed
-                    foundUniqueQuest = true;
                 }
             }
 
@@ -153,14 +156,50 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                             }
                             else
                             {
-                                offeredQuest = GameManager.Instance.QuestListsManager.GetGuildQuest(
-                                    guildGroup,
-                                    guild.IsMember() ? Questing.MembershipStatus.Member : Questing.MembershipStatus.Nonmember,
-                                    guild.GetFactionId(),
-                                    rep,
-                                    guild.Rank
-                                );
-                                Debug.Log($"New offered quest candidate: {offeredQuest.QuestName}");
+                                if (QuestOfferLocationsMod.avoidRepeatingGuildQuests)
+                                {
+                                    while (!foundUniqueQuest)
+                                    {
+                                        // Check timeout
+                                        if (System.DateTime.Now.Subtract(timeStart).TotalSeconds >= QuestOfferLocationsMod.maxSearchTimeInSeconds)
+                                        {
+                                            ShowFailGetQuestMessage();
+                                            Debug.Log("ShowFailGetQuestMessage 2");
+                                            SetQuestOffersForNPC(serviceNPC, maxQuestsForLocation);
+                                            return;
+                                        }
+
+                                        // Check if offeredQuest is already on the list of previously offered quests
+                                        if (npcQuestOfferNames.TryGetValue(npcKey, out var offeredQuestNames) && offeredQuestNames.Contains(offeredQuest.QuestName))
+                                        {
+                                            // Request a new quest
+                                            if (DaggerfallUnity.Settings.GuildQuestListBox)
+                                            {
+                                                offeredQuest = GameManager.Instance.QuestListsManager.LoadQuest(questPool[SelectedIndex], serviceNPC.Data.factionID);
+                                            }
+                                            else
+                                            {
+                                                offeredQuest = GameManager.Instance.QuestListsManager.GetGuildQuest(
+                                                    guildGroup,
+                                                    guildManager.GetGuild(guildGroup).IsMember() ? Questing.MembershipStatus.Member : Questing.MembershipStatus.Nonmember,
+                                                    guildManager.GetGuild(guildGroup).GetFactionId(),
+                                                    guildManager.GetGuild(guildGroup).GetReputation(playerEntity),
+                                                    guildManager.GetGuild(guildGroup).Rank
+                                                );
+                                                Debug.Log($"New offered quest candidate in foundUniqueQuest loop: {offeredQuest?.QuestName ?? "null"}");
+                                            }
+
+                                            // If offeredQuest is null, continue to avoid null reference errors
+                                            if (offeredQuest == null)
+                                                continue;
+                                        }
+                                        else
+                                        {
+                                            // Quest is unique, we can proceed
+                                            foundUniqueQuest = true;
+                                        }
+                                    }
+                                }
                             }
                         }
                         else
@@ -276,11 +315,11 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             switch (playerGPS.CurrentLocationType)
             {
                 case DFRegion.LocationTypes.TownCity:
-                    return 6; // Maximum quests for TownCity
+                    return QuestOfferLocationsMod.limitCityQuests; // Maximum quests for TownCity
                 case DFRegion.LocationTypes.TownHamlet:
-                    return 4; // Maximum quests for TownHamlet
+                    return QuestOfferLocationsMod.limitTownQuests; // Maximum quests for TownHamlet
                 default:
-                    return 2; // Default maximum for other locations
+                    return QuestOfferLocationsMod.limitVillageQuests; // Default maximum for other locations
             }
         }
 

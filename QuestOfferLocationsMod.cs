@@ -16,6 +16,7 @@ namespace Assets.Scripts.Game.UserInterfaceWindows
         public static int limitVillageQuests;
         public static int limitTownQuests;
         public static int limitCityQuests;
+        public static bool avoidRepeatingGuildQuests;
 
         public void Awake()
         {
@@ -55,6 +56,7 @@ namespace Assets.Scripts.Game.UserInterfaceWindows
             limitVillageQuests = settings.GetInt("LocationSettings", "LimitVillageQuests");
             limitTownQuests = settings.GetInt("LocationSettings", "LimitTownQuests");
             limitCityQuests = settings.GetInt("LocationSettings", "LimitCityQuests");
+            avoidRepeatingGuildQuests = settings.GetBool("LocationSettings", "AvoidRepeatingGuildQuests");
 
             // Register the save data handler
             mod.SaveDataInterface = QuestOfferLocationSaveDataHandler.Instance;
