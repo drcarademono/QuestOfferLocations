@@ -31,8 +31,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         protected override void GetQuest()
         {
-            // Just exit if this NPC already involved in an active quest
-            // If quest conditions are complete the quest system should pickup ending
+            // Just exit if this NPC is already involved in an active quest
             if (QuestMachine.Instance.IsLastNPCClickedAnActiveQuestor())
             {
                 CloseWindow();
@@ -40,24 +39,33 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             }
 
             // Get the faction id for affecting reputation on success/failure, and current rep
-            int factionId = questorNPC.factionID;
+            int factionId = questorNPC.hash; // Use the NPC's hash as the unique key
             Genders gender = questorNPC.gender;
             int reputation = GameManager.Instance.PlayerEntity.FactionData.GetReputation(factionId);
             int level = GameManager.Instance.PlayerEntity.Level;
 
+            // Set up the initial offered quest
             offeredQuest = GameManager.Instance.QuestListsManager.GetSocialQuest(socialGroup, factionId, gender, reputation, level);
+
+            // Filter out quests already offered by this NPC
+            if (QuestOfferLocationGuildServicePopUpWindow.npcQuestOfferNames.TryGetValue(factionId, out var offeredQuestNames))
+            {
+                while (offeredQuest != null && offeredQuestNames.Contains(offeredQuest.QuestName))
+                {
+                    offeredQuest = GameManager.Instance.QuestListsManager.GetSocialQuest(socialGroup, factionId, gender, reputation, level);
+                }
+            }
 
             if (QuestOfferLocationsMod.preferNearbyQuests)
             {
                 NearestQuest = null;
 
-                //int attempts = 0;
                 var timeStart = System.DateTime.Now;
                 bool found = false;
                 while (!found)
                 {
-                    // if close enough quest still not found after enough time has elapsed, stick with the current offered quest
-                    if (System.DateTime.Now.Subtract(timeStart).TotalSeconds >= QuestOfferLocationsMod.maxSearchTimeInSeconds)//++attempts >= 10)
+                    // Timeout to fallback to nearest quest
+                    if (System.DateTime.Now.Subtract(timeStart).TotalSeconds >= QuestOfferLocationsMod.maxSearchTimeInSeconds)
                     {
                         found = true;
                         offeredQuest = NearestQuest?.Quest;
@@ -87,7 +95,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
                         if (!found && farthestTravelTimeInDays > QuestOfferLocationsMod.maxTravelDistanceInDays)
                         {
-                            // store the nearest quest in the loop, as a fallback
+                            // Store the nearest quest in the loop as a fallback
                             if (NearestQuest == null || NearestQuest.TimeToTravelToQuestInDays > farthestTravelTimeInDays)
                             {
                                 NearestQuest = new NearestQuest
@@ -97,7 +105,6 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                                 };
                             }
 
-                            // Select a quest at random from appropriate pool
                             offeredQuest = GameManager.Instance.QuestListsManager.GetSocialQuest(socialGroup, factionId, gender, reputation, level);
                             continue;
                         }
@@ -112,8 +119,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
             if (offeredQuest != null)
             {
-                // Offer the quest to player
-                var messageBox = QuestOfferMessageHelper.CreateQuestOffer(offeredQuest); //QuestMachine.Instance.CreateMessagePrompt(offeredQuest, (int)QuestMachine.QuestMessages.QuestorOffer);// TODO - need to provide an mcp for macros?
+                // Offer the quest to the player
+                var messageBox = QuestOfferMessageHelper.CreateQuestOffer(offeredQuest);
                 if (messageBox != null)
                 {
                     messageBox.OnButtonClick += OfferQuest_OnButtonClick;

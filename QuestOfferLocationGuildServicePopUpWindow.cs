@@ -8,6 +8,7 @@ using Assets.Scripts.Game.UserInterfaceWindows;
 using DaggerfallWorkshop.Game;
 using DaggerfallWorkshop.Utility;
 using System.Collections.Generic;
+using DaggerfallWorkshop.Game.Questing;
 
 namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 {
@@ -16,6 +17,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         public static Dictionary<int, int> npcQuestOffers = new Dictionary<int, int>();
         public static Dictionary<int, List<string>> npcQuestOfferNames = new Dictionary<int, List<string>>();
         public static Dictionary<int, (int day, int year)> npcLastQuestOfferDate = new Dictionary<int, (int day, int year)>();
+        public static Dictionary<int, List<int>> npcInvalidQuestIndices = new Dictionary<int, List<int>>();
 
         public int SelectedIndex;
         public NearestQuest NearestQuest;
@@ -323,11 +325,104 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             }
         }
 
-        protected override void QuestPicker_OnItemPicked(int index, string name)
+        protected override void GettingQuestsBox_OnClose()
         {
-            SelectedIndex = index;
+            // Create a new ListPickerWindow
+            DaggerfallListPickerWindow questPicker = new DaggerfallListPickerWindow(uiManager, uiManager.TopWindow);
+            questPicker.OnItemPicked += QuestPicker_OnItemPicked;
 
-            base.QuestPicker_OnItemPicked(index, name);
+            // Get the NPC key to filter previously invalid quests
+            int npcKey = serviceNPC.Data.hash;
+
+            // Ensure a list exists for this NPC in the dictionary
+            if (!npcInvalidQuestIndices.ContainsKey(npcKey))
+                npcInvalidQuestIndices[npcKey] = new List<int>();
+
+            // Prepare a list of indices to remove from the questPool in case of failures
+            List<int> failures = new List<int>();
+
+            // Iterate through the questPool to populate the ListPickerWindow
+            for (int i = 0; i < questPool.Count; i++)
+            {
+                try
+                {
+                    // Skip quests that are invalid for this NPC
+                    if (npcInvalidQuestIndices[npcKey].Contains(i))
+                        continue;
+
+                    // Retrieve the faction ID safely
+                    int factionId = guildManager.GetGuild(guildGroup).GetFactionId();
+
+                    // Load the quest partially to get the human-readable name
+                    Quest quest = GameManager.Instance.QuestListsManager.LoadQuest(questPool[i], factionId, true);
+
+                    // Add quest name to the ListBox
+                    string displayName = quest.DisplayName;
+                    string localizedDisplayName = QuestMachine.Instance.GetLocalizedQuestDisplayName(quest.QuestName);
+                    if (!string.IsNullOrEmpty(localizedDisplayName))
+                        displayName = localizedDisplayName;
+
+                    questPicker.ListBox.AddItem(displayName ?? quest.QuestName);
+                    quest.Dispose();
+                }
+                catch
+                {
+                    // Record failures to remove these quests from the questPool
+                    failures.Add(i);
+                }
+            }
+
+            // Remove any quests that failed partial parsing
+            foreach (int i in failures)
+                questPool.RemoveAt(i);
+
+            // Push the ListPickerWindow to the UI stack
+            uiManager.PushWindow(questPicker);
+        }
+
+        protected override void QuestPicker_OnItemPicked(int visibleIndex, string name)
+        {
+            // Get the NPC key
+            int npcKey = serviceNPC.Data.hash;
+
+            // Ensure a list exists for this NPC in the dictionary
+            if (!npcInvalidQuestIndices.ContainsKey(npcKey))
+                npcInvalidQuestIndices[npcKey] = new List<int>();
+
+            // Convert the visible index to the original index in questPool
+            int adjustedIndex = visibleIndex;
+            if (npcInvalidQuestIndices[npcKey].Count > 0)
+            {
+                foreach (int invalidIndex in npcInvalidQuestIndices[npcKey])
+                {
+                    if (invalidIndex <= adjustedIndex)
+                        adjustedIndex++;
+                }
+            }
+
+            // Add the adjusted index to the invalid indices for this NPC
+            if (!npcInvalidQuestIndices[npcKey].Contains(adjustedIndex))
+                npcInvalidQuestIndices[npcKey].Add(adjustedIndex);
+
+            // Attempt to load the quest using the adjusted index
+            int factionId = guildManager.GetGuild(guildGroup).GetFactionId(); // Retrieve faction ID safely
+            offeredQuest = GameManager.Instance.QuestListsManager.LoadQuest(questPool[adjustedIndex], factionId);
+
+            // Record the adjusted index
+            SelectedIndex = adjustedIndex;
+
+            DaggerfallUI.Instance.PlayOneShot(SoundClips.ButtonClick);
+            DaggerfallUI.UIManager.PopWindow();
+            if (offeredQuest != null && adjustedIndex < questPool.Count)
+            {
+                offeredQuest = GameManager.Instance.QuestListsManager.LoadQuest(questPool[adjustedIndex], factionId);
+                OfferQuest();
+            } else
+            {
+                // Show failure message and skip the base method call
+                ShowFailGetQuestMessage();
+                Debug.LogWarning($"Failed to load quest at adjusted index {adjustedIndex}.");
+            }
         }
     }
 }

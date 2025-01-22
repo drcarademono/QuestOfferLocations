@@ -29,7 +29,8 @@ public class QuestOfferLocationSaveDataHandler : IHasModSaveData
         {
             npcQuestOffers = new Dictionary<int, int>(),
             npcQuestOfferNames = new Dictionary<int, List<string>>(),
-            npcLastQuestOfferDate = new Dictionary<int, (int day, int year)>()
+            npcLastQuestOfferDate = new Dictionary<int, (int day, int year)>(),
+            npcInvalidQuestIndices = new Dictionary<int, List<int>>()
         };
     }
 
@@ -39,7 +40,8 @@ public class QuestOfferLocationSaveDataHandler : IHasModSaveData
         {
             npcQuestOffers = QuestOfferLocationGuildServicePopUpWindow.npcQuestOffers,
             npcQuestOfferNames = QuestOfferLocationGuildServicePopUpWindow.npcQuestOfferNames,
-            npcLastQuestOfferDate = QuestOfferLocationGuildServicePopUpWindow.npcLastQuestOfferDate
+            npcLastQuestOfferDate = QuestOfferLocationGuildServicePopUpWindow.npcLastQuestOfferDate,
+            npcInvalidQuestIndices = QuestOfferLocationGuildServicePopUpWindow.npcInvalidQuestIndices
         };
     }
 
@@ -51,6 +53,7 @@ public class QuestOfferLocationSaveDataHandler : IHasModSaveData
             QuestOfferLocationGuildServicePopUpWindow.npcQuestOffers = data.npcQuestOffers ?? new Dictionary<int, int>();
             QuestOfferLocationGuildServicePopUpWindow.npcQuestOfferNames = data.npcQuestOfferNames ?? new Dictionary<int, List<string>>();
             QuestOfferLocationGuildServicePopUpWindow.npcLastQuestOfferDate = data.npcLastQuestOfferDate ?? new Dictionary<int, (int day, int year)>();
+            QuestOfferLocationGuildServicePopUpWindow.npcInvalidQuestIndices = data.npcInvalidQuestIndices ?? new Dictionary<int, List<int>>();
         }
     }
 
@@ -60,5 +63,6 @@ public class QuestOfferLocationSaveDataHandler : IHasModSaveData
         public Dictionary<int, int> npcQuestOffers;
         public Dictionary<int, List<string>> npcQuestOfferNames;
         public Dictionary<int, (int day, int year)> npcLastQuestOfferDate;
+        public Dictionary<int, List<int>> npcInvalidQuestIndices;
     }
 }
