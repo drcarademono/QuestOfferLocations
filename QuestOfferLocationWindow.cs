@@ -38,20 +38,20 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 return;
             }
 
-            // Use the actual factionID for reputation and quest generation...
+            // Get the faction id for affecting reputation on success/failure, and current rep
             int factionId = questorNPC.factionID;
             Genders gender = questorNPC.gender;
             int reputation = GameManager.Instance.PlayerEntity.FactionData.GetReputation(factionId);
             int level = GameManager.Instance.PlayerEntity.Level;
 
-            // Also use the NPC's hash as a unique key for filtering
-            int npcUniqueKey = questorNPC.hash;
+            // Also get a unique key for this NPC (using the NPC's hash)
+            int npcKey = questorNPC.hash;
 
             // Set up the initial offered quest using the correct factionId.
             offeredQuest = GameManager.Instance.QuestListsManager.GetSocialQuest(socialGroup, factionId, gender, reputation, level);
 
             // Filter out quests already offered by this NPC using the unique key.
-            if (QuestOfferLocationGuildServicePopUpWindow.npcQuestOfferNames.TryGetValue(npcUniqueKey, out var offeredQuestNames))
+            if (QuestOfferLocationGuildServicePopUpWindow.npcQuestOfferNames.TryGetValue(npcKey, out var offeredQuestNames))
             {
                 while (offeredQuest != null && offeredQuestNames.Contains(offeredQuest.QuestName))
                 {
