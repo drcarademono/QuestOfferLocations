@@ -1,6 +1,6 @@
 {
     "ModTitle": "Quest Offer Locations",
-    "ModVersion": "1.1.0",
+    "ModVersion": "1.1.1",
     "ModAuthor": "Macadaynu",
     "ContactInfo": "DFU Forums",
     "DFUnity_Version": "1.0.0",
@@ -13,6 +13,7 @@
         "Assets/Game/Mods/QuestOfferLocations/modsettings.json",
         "Assets/Game/Mods/QuestOfferLocations/QuestOfferLocationWindow.cs",
         "Assets/Game/Mods/QuestOfferLocations/QuestOfferMessageHelper.cs",
-        "Assets/Game/Mods/QuestOfferLocations/QuestOfferLocationSaveDataHandler.cs"
+        "Assets/Game/Mods/QuestOfferLocations/QuestOfferLocationSaveDataHandler.cs",
+        "Assets/Game/Mods/QuestOfferLocations/Quest Offer Locations.dfmod.json"
     ]
 }
