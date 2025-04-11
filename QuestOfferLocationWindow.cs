@@ -51,14 +51,13 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             offeredQuest = GameManager.Instance.QuestListsManager.GetSocialQuest(socialGroup, factionId, gender, reputation, level);
 
             // Filter out quests already offered by this NPC using the unique key.
-            if (QuestOfferLocationsMod.avoidRepeatingGuildQuests)
-                if (QuestOfferLocationGuildServicePopUpWindow.npcQuestOfferNames.TryGetValue(npcUniqueKey, out var offeredQuestNames))
+            if (QuestOfferLocationGuildServicePopUpWindow.npcQuestOfferNames.TryGetValue(npcUniqueKey, out var offeredQuestNames))
+            {
+                while (offeredQuest != null && offeredQuestNames.Contains(offeredQuest.QuestName))
                 {
-                    while (offeredQuest != null && offeredQuestNames.Contains(offeredQuest.QuestName))
-                    {
-                        offeredQuest = GameManager.Instance.QuestListsManager.GetSocialQuest(socialGroup, factionId, gender, reputation, level);
-                    }
+                    offeredQuest = GameManager.Instance.QuestListsManager.GetSocialQuest(socialGroup, factionId, gender, reputation, level);
                 }
+            }
 
             if (QuestOfferLocationsMod.preferNearbyQuests)
             {
