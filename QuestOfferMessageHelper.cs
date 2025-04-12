@@ -23,13 +23,6 @@ namespace Assets.Scripts.Game.MacadaynuMods.QuestOfferLocations
             Message message = quest.GetMessage((int)QuestMachine.QuestMessages.QuestorOffer);
 
             List<TextFile.Token> tokens = message.GetTextTokens().ToList();
-Debug.Log($"[DEBUG] Total tokens: {tokens.Count}");
-for (int i = 0; i < tokens.Count; i++)
-{
-    TextFile.Token token = tokens[i];
-    Debug.Log($"[DEBUG] Token[{i}]: formatting: {token.formatting}, text: \"{token.text}\", x: {token.x}, y: {token.y}");
-}
-
 
             Message acceptMessage = quest.GetMessage((int)QuestMachine.QuestMessages.AcceptQuest);
 
@@ -100,7 +93,7 @@ private static Place GetLastPlaceMentionedInMessage(Message message)
 {
     QuestMacroHelper helper = new QuestMacroHelper();
     QuestResource[] resources = helper.GetMessageResources(message);
-    Debug.Log($"[DEBUG] GetMessageResources returned {resources?.Length ?? 0} resources.");
+    Debug.Log($"[QOL] GetMessageResources returned {resources?.Length ?? 0} resources.");
 
     if (resources != null)
     {
@@ -110,28 +103,28 @@ private static Place GetLastPlaceMentionedInMessage(Message message)
             // Check resource types and log key properties
             if (resource is Person person)
             {
-                Debug.Log($"[DEBUG] Resource[{i}]: Type = Person, DisplayName = {person.DisplayName}");
+                //Debug.Log($"[QOL] Resource[{i}]: Type = Person, DisplayName = {person.DisplayName}");
             }
             else if (resource is Place place)
             {
-                Debug.Log($"[DEBUG] Resource[{i}]: Type = Place, LocationName = {place.SiteDetails.locationName}, Region = {place.SiteDetails.regionName}");
+                //Debug.Log($"[QOL] Resource[{i}]: Type = Place, LocationName = {place.SiteDetails.locationName}, Region = {place.SiteDetails.regionName}");
             }
             else
             {
-                Debug.Log($"[DEBUG] Resource[{i}]: Type = {resource.GetType().Name}, ToString = {resource.ToString()}");
+                //Debug.Log($"[QOL] Resource[{i}]: Type = {resource.GetType().Name}, ToString = {resource.ToString()}");
             }
         }
     }
     else
     {
-        Debug.Log("[DEBUG] GetMessageResources returned null.");
+        Debug.Log("[QOL] GetMessageResources returned null.");
     }
 
     Place lastPlace = GetLastPlaceInResources(resources);
     if (lastPlace != null)
-        Debug.Log($"[DEBUG] GetLastPlaceMentionedInMessage selected Place: LocationName = {lastPlace.SiteDetails.locationName}, Region = {lastPlace.SiteDetails.regionName}");
+        //Debug.Log($"[QOL] GetLastPlaceMentionedInMessage selected Place: LocationName = {lastPlace.SiteDetails.locationName}, Region = {lastPlace.SiteDetails.regionName}");
     else
-        Debug.Log("[DEBUG] GetLastPlaceMentionedInMessage did not find any Place resource.");
+        //Debug.Log("[QOL] GetLastPlaceMentionedInMessage did not find any Place resource.");
     return lastPlace;
 }
 
@@ -139,7 +132,7 @@ public static Place GetLastPlaceInResources(QuestResource[] resources)
 {
     if (resources == null || resources.Length == 0)
     {
-        Debug.Log("[DEBUG] GetLastPlaceInResources: resource array is null or empty.");
+        //Debug.Log("[QOL] GetLastPlaceInResources: resource array is null or empty.");
         return null;
     }
 
@@ -150,20 +143,20 @@ public static Place GetLastPlaceInResources(QuestResource[] resources)
         if (resource is Place place)
         {
             lastPlace = place;
-            Debug.Log($"[DEBUG] GetLastPlaceInResources: Resource[{i}] is a Place - LocationName: {place.SiteDetails.locationName}, Region: {place.SiteDetails.regionName}");
+            //Debug.Log($"[QOL] GetLastPlaceInResources: Resource[{i}] is a Place - LocationName: {place.SiteDetails.locationName}, Region: {place.SiteDetails.regionName}");
         }
         else if (resource is Person person)
         {
-            Debug.Log($"[DEBUG] GetLastPlaceInResources: Resource[{i}] is a Person - DisplayName: {person.DisplayName}");
+            //Debug.Log($"[QOL] GetLastPlaceInResources: Resource[{i}] is a Person - DisplayName: {person.DisplayName}");
         }
         else
         {
-            Debug.Log($"[DEBUG] GetLastPlaceInResources: Resource[{i}] Type: {resource.GetType().Name}, ToString: {resource.ToString()}");
+            //Debug.Log($"[QOL] GetLastPlaceInResources: Resource[{i}] Type: {resource.GetType().Name}, ToString: {resource.ToString()}");
         }
     }
 
     if (lastPlace == null)
-        Debug.Log("[DEBUG] GetLastPlaceInResources did not find any Place resource after checking all resources.");
+        //Debug.Log("[QOL] GetLastPlaceInResources did not find any Place resource after checking all resources.");
 
     return lastPlace;
 }
