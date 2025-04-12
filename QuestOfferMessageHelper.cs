@@ -89,78 +89,77 @@ namespace Assets.Scripts.Game.MacadaynuMods.QuestOfferLocations
             return null;
         }
 
-private static Place GetLastPlaceMentionedInMessage(Message message)
-{
-    QuestMacroHelper helper = new QuestMacroHelper();
-    QuestResource[] resources = helper.GetMessageResources(message);
-    Debug.Log($"[QOL] GetMessageResources returned {resources?.Length ?? 0} resources.");
-
-    if (resources != null)
-    {
-        for (int i = 0; i < resources.Length; i++)
+        private static Place GetLastPlaceMentionedInMessage(Message message)
         {
-            QuestResource resource = resources[i];
-            // Check resource types and log key properties
-            if (resource is Person person)
+            QuestMacroHelper helper = new QuestMacroHelper();
+            QuestResource[] resources = helper.GetMessageResources(message);
+            Debug.Log($"[QOL] GetMessageResources returned {resources?.Length ?? 0} resources.");
+
+            if (resources != null)
             {
-                //Debug.Log($"[QOL] Resource[{i}]: Type = Person, DisplayName = {person.DisplayName}");
-            }
-            else if (resource is Place place)
-            {
-                //Debug.Log($"[QOL] Resource[{i}]: Type = Place, LocationName = {place.SiteDetails.locationName}, Region = {place.SiteDetails.regionName}");
+                for (int i = 0; i < resources.Length; i++)
+                {
+                    QuestResource resource = resources[i];
+                    // Check resource types and log key properties
+                    if (resource is Person person)
+                    {
+                        //Debug.Log($"[QOL] Resource[{i}]: Type = Person, DisplayName = {person.DisplayName}");
+                    }
+                    else if (resource is Place place)
+                    {
+                        //Debug.Log($"[QOL] Resource[{i}]: Type = Place, LocationName = {place.SiteDetails.locationName}, Region = {place.SiteDetails.regionName}");
+                    }
+                    else
+                    {
+                        //Debug.Log($"[QOL] Resource[{i}]: Type = {resource.GetType().Name}, ToString = {resource.ToString()}");
+                    }
+                }
             }
             else
             {
-                //Debug.Log($"[QOL] Resource[{i}]: Type = {resource.GetType().Name}, ToString = {resource.ToString()}");
+                Debug.Log("[QOL] GetMessageResources returned null.");
             }
+
+            Place lastPlace = GetLastPlaceInResources(resources);
+            //if (lastPlace != null)
+                //Debug.Log($"[QOL] GetLastPlaceMentionedInMessage selected Place: LocationName = {lastPlace.SiteDetails.locationName}, Region = {lastPlace.SiteDetails.regionName}");
+            //else
+                //Debug.Log("[QOL] GetLastPlaceMentionedInMessage did not find any Place resource.");
+            return lastPlace;
         }
-    }
-    else
-    {
-        Debug.Log("[QOL] GetMessageResources returned null.");
-    }
 
-    Place lastPlace = GetLastPlaceInResources(resources);
-    if (lastPlace != null)
-        //Debug.Log($"[QOL] GetLastPlaceMentionedInMessage selected Place: LocationName = {lastPlace.SiteDetails.locationName}, Region = {lastPlace.SiteDetails.regionName}");
-    else
-        //Debug.Log("[QOL] GetLastPlaceMentionedInMessage did not find any Place resource.");
-    return lastPlace;
-}
-
-public static Place GetLastPlaceInResources(QuestResource[] resources)
-{
-    if (resources == null || resources.Length == 0)
-    {
-        //Debug.Log("[QOL] GetLastPlaceInResources: resource array is null or empty.");
-        return null;
-    }
-
-    Place lastPlace = null;
-    for (int i = 0; i < resources.Length; i++)
-    {
-        QuestResource resource = resources[i];
-        if (resource is Place place)
+        public static Place GetLastPlaceInResources(QuestResource[] resources)
         {
-            lastPlace = place;
-            //Debug.Log($"[QOL] GetLastPlaceInResources: Resource[{i}] is a Place - LocationName: {place.SiteDetails.locationName}, Region: {place.SiteDetails.regionName}");
-        }
-        else if (resource is Person person)
-        {
-            //Debug.Log($"[QOL] GetLastPlaceInResources: Resource[{i}] is a Person - DisplayName: {person.DisplayName}");
-        }
-        else
-        {
-            //Debug.Log($"[QOL] GetLastPlaceInResources: Resource[{i}] Type: {resource.GetType().Name}, ToString: {resource.ToString()}");
-        }
-    }
+            if (resources == null || resources.Length == 0)
+            {
+                //Debug.Log("[QOL] GetLastPlaceInResources: resource array is null or empty.");
+                return null;
+            }
 
-    if (lastPlace == null)
-        //Debug.Log("[QOL] GetLastPlaceInResources did not find any Place resource after checking all resources.");
+            Place lastPlace = null;
+            for (int i = 0; i < resources.Length; i++)
+            {
+                QuestResource resource = resources[i];
+                if (resource is Place place)
+                {
+                    lastPlace = place;
+                    //Debug.Log($"[QOL] GetLastPlaceInResources: Resource[{i}] is a Place - LocationName: {place.SiteDetails.locationName}, Region: {place.SiteDetails.regionName}");
+                }
+                //else if (resource is Person person)
+                //{
+                    //Debug.Log($"[QOL] GetLastPlaceInResources: Resource[{i}] is a Person - DisplayName: {person.DisplayName}");
+                //}
+                //else
+                //{
+                    //Debug.Log($"[QOL] GetLastPlaceInResources: Resource[{i}] Type: {resource.GetType().Name}, ToString: {resource.ToString()}");
+                //}
+            }
 
-    return lastPlace;
-}
+            //if (lastPlace == null)
+                //Debug.Log("[QOL] GetLastPlaceInResources did not find any Place resource after checking all resources.");
 
+            return lastPlace;
+        }
 
         private static string GetTravelTimeToPlace(Place place)
         {
