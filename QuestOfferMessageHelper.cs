@@ -23,6 +23,13 @@ namespace Assets.Scripts.Game.MacadaynuMods.QuestOfferLocations
             Message message = quest.GetMessage((int)QuestMachine.QuestMessages.QuestorOffer);
 
             List<TextFile.Token> tokens = message.GetTextTokens().ToList();
+Debug.Log($"[DEBUG] Total tokens: {tokens.Count}");
+for (int i = 0; i < tokens.Count; i++)
+{
+    TextFile.Token token = tokens[i];
+    Debug.Log($"[DEBUG] Token[{i}]: formatting: {token.formatting}, text: \"{token.text}\", x: {token.x}, y: {token.y}");
+}
+
 
             Message acceptMessage = quest.GetMessage((int)QuestMachine.QuestMessages.AcceptQuest);
 
@@ -89,28 +96,78 @@ namespace Assets.Scripts.Game.MacadaynuMods.QuestOfferLocations
             return null;
         }
 
-        private static Place GetLastPlaceMentionedInMessage(Message message)
+private static Place GetLastPlaceMentionedInMessage(Message message)
+{
+    QuestMacroHelper helper = new QuestMacroHelper();
+    QuestResource[] resources = helper.GetMessageResources(message);
+    Debug.Log($"[DEBUG] GetMessageResources returned {resources?.Length ?? 0} resources.");
+
+    if (resources != null)
+    {
+        for (int i = 0; i < resources.Length; i++)
         {
-            QuestMacroHelper helper = new QuestMacroHelper();
-            QuestResource[] resources = helper.GetMessageResources(message);
-
-            return GetLastPlaceInResources(resources);
-        }
-
-        public static Place GetLastPlaceInResources(QuestResource[] resources)
-        {
-            if (resources == null || resources.Length == 0)
-                return null;
-
-            Place lastPlace = null;
-            foreach (QuestResource resource in resources)
+            QuestResource resource = resources[i];
+            // Check resource types and log key properties
+            if (resource is Person person)
             {
-                if (resource is Place)
-                    lastPlace = (Place)resource;
+                Debug.Log($"[DEBUG] Resource[{i}]: Type = Person, DisplayName = {person.DisplayName}");
             }
-
-            return lastPlace;
+            else if (resource is Place place)
+            {
+                Debug.Log($"[DEBUG] Resource[{i}]: Type = Place, LocationName = {place.SiteDetails.locationName}, Region = {place.SiteDetails.regionName}");
+            }
+            else
+            {
+                Debug.Log($"[DEBUG] Resource[{i}]: Type = {resource.GetType().Name}, ToString = {resource.ToString()}");
+            }
         }
+    }
+    else
+    {
+        Debug.Log("[DEBUG] GetMessageResources returned null.");
+    }
+
+    Place lastPlace = GetLastPlaceInResources(resources);
+    if (lastPlace != null)
+        Debug.Log($"[DEBUG] GetLastPlaceMentionedInMessage selected Place: LocationName = {lastPlace.SiteDetails.locationName}, Region = {lastPlace.SiteDetails.regionName}");
+    else
+        Debug.Log("[DEBUG] GetLastPlaceMentionedInMessage did not find any Place resource.");
+    return lastPlace;
+}
+
+public static Place GetLastPlaceInResources(QuestResource[] resources)
+{
+    if (resources == null || resources.Length == 0)
+    {
+        Debug.Log("[DEBUG] GetLastPlaceInResources: resource array is null or empty.");
+        return null;
+    }
+
+    Place lastPlace = null;
+    for (int i = 0; i < resources.Length; i++)
+    {
+        QuestResource resource = resources[i];
+        if (resource is Place place)
+        {
+            lastPlace = place;
+            Debug.Log($"[DEBUG] GetLastPlaceInResources: Resource[{i}] is a Place - LocationName: {place.SiteDetails.locationName}, Region: {place.SiteDetails.regionName}");
+        }
+        else if (resource is Person person)
+        {
+            Debug.Log($"[DEBUG] GetLastPlaceInResources: Resource[{i}] is a Person - DisplayName: {person.DisplayName}");
+        }
+        else
+        {
+            Debug.Log($"[DEBUG] GetLastPlaceInResources: Resource[{i}] Type: {resource.GetType().Name}, ToString: {resource.ToString()}");
+        }
+    }
+
+    if (lastPlace == null)
+        Debug.Log("[DEBUG] GetLastPlaceInResources did not find any Place resource after checking all resources.");
+
+    return lastPlace;
+}
+
 
         private static string GetTravelTimeToPlace(Place place)
         {

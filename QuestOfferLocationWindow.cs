@@ -1,3 +1,4 @@
+using UnityEngine;
 using DaggerfallWorkshop.Game.UserInterface;
 using DaggerfallWorkshop.Game.Questing;
 using DaggerfallConnect.Arena2;
@@ -120,20 +121,39 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 }
             }
 
-            if (offeredQuest != null)
+if (offeredQuest != null)
+{
+    // Debug: Check for Place resources in the quest.
+    QuestResource[] placeResources = offeredQuest.GetAllResources(typeof(Place));
+    if (placeResources != null && placeResources.Length > 0)
+    {
+        foreach (QuestResource resource in placeResources)
+        {
+            Place place = resource as Place;
+            if (place != null)
             {
-                // Offer the quest to the player
-                var messageBox = QuestOfferMessageHelper.CreateQuestOffer(offeredQuest);
-                if (messageBox != null)
-                {
-                    messageBox.OnButtonClick += OfferQuest_OnButtonClick;
-                    messageBox.Show();
-                }
+                Debug.Log($"[DEBUG] Found Place resource: LocationName = {place.SiteDetails.locationName}, Region = {place.SiteDetails.regionName}");
             }
-            else if (!GameManager.Instance.IsPlayerInsideCastle) // Failed get quest messages do not appear inside castles in classic.
-            {
-                ShowFailGetQuestMessage();
-            }
+        }
+    }
+    else
+    {
+        Debug.Log("[DEBUG] No Place resource found in offeredQuest.");
+    }
+    
+    // Offer the quest to the player
+    var messageBox = QuestOfferMessageHelper.CreateQuestOffer(offeredQuest);
+    if (messageBox != null)
+    {
+        messageBox.OnButtonClick += OfferQuest_OnButtonClick;
+        messageBox.Show();
+    }
+}
+else if (!GameManager.Instance.IsPlayerInsideCastle) // Failed get quest messages do not appear inside castles in classic.
+{
+    ShowFailGetQuestMessage();
+}
+
         }
 
         #endregion

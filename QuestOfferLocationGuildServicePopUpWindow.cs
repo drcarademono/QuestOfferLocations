@@ -7,6 +7,7 @@ using DaggerfallWorkshop.Game.Guilds;
 using Assets.Scripts.Game.UserInterfaceWindows;
 using DaggerfallWorkshop.Game;
 using DaggerfallWorkshop.Utility;
+using System;
 using System.Collections.Generic;
 using DaggerfallWorkshop.Game.Questing;
 using System.Linq;
@@ -37,279 +38,216 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         {
             Debug.Log($"Original offered quest: {offeredQuest?.QuestName ?? "null"}");
 
-            // Determine the maximum number of quests based on LocationType
+            // Determine the maximum number of quests allowed for this location.
             int maxQuestsForLocation = GetMaxQuestsForLocation();
 
-            // Get quest offers for this NPC from external storage
+            // Get the current quest offers count for this NPC.
             int questOffers = GetQuestOffersForNPC(serviceNPC);
 
-            // Check if the maximum offers have been reached
+            // If we have reached the limit, show a failure message.
             if (QuestOfferLocationsMod.limitGuildQuestions && questOffers >= maxQuestsForLocation)
             {
                 ShowFailGetQuestMessage();
-                Debug.Log("ShowFailGetQuestMessage 1");
+                Debug.Log("ShowFailGetQuestMessage (limit reached)");
                 return;
             }
 
-            // Start checking for unique quests
+            // NPC keys used for tracking unique quests.
+            int factionId = serviceNPC.Data.factionID;
             int npcKey = serviceNPC.Data.hash;
-            var timeStart = System.DateTime.Now;
-            bool foundUniqueQuest = false;
 
-            if (QuestOfferLocationsMod.avoidRepeatingGuildQuests)
+            // First: Ensure the quest is unique (if configured).
+            DateTime uniquenessStart = DateTime.Now;
+            offeredQuest = EnsureUniqueQuest(offeredQuest, factionId, npcKey, uniquenessStart, QuestOfferLocationsMod.maxSearchTimeInSeconds);
+            if (offeredQuest == null)
             {
-                while (!foundUniqueQuest)
-                {
-                    // Check timeout
-                    if (System.DateTime.Now.Subtract(timeStart).TotalSeconds >= QuestOfferLocationsMod.maxSearchTimeInSeconds)
-                    {
-                        ShowFailGetQuestMessage();
-                        Debug.Log("ShowFailGetQuestMessage 2");
-                        SetQuestOffersForNPC(serviceNPC, maxQuestsForLocation);
-                        return;
-                    }
-
-                    // Check if offeredQuest is already on the list of previously offered quests
-                    if (npcQuestOfferNames.TryGetValue(npcKey, out var offeredQuestNames) && offeredQuestNames.Contains(offeredQuest.QuestName))
-                    {
-                        // Request a new quest
-                        if (DaggerfallUnity.Settings.GuildQuestListBox)
-                        {
-                            offeredQuest = GameManager.Instance.QuestListsManager.LoadQuest(questPool[SelectedIndex], serviceNPC.Data.factionID);
-                        }
-                        else
-                        {
-                            offeredQuest = GameManager.Instance.QuestListsManager.GetGuildQuest(
-                                guildGroup,
-                                guildManager.GetGuild(guildGroup).IsMember() ? Questing.MembershipStatus.Member : Questing.MembershipStatus.Nonmember,
-                                guildManager.GetGuild(guildGroup).GetFactionId(),
-                                guildManager.GetGuild(guildGroup).GetReputation(playerEntity),
-                                guildManager.GetGuild(guildGroup).Rank
-                            );
-                            Debug.Log($"New offered quest candidate in foundUniqueQuest loop: {offeredQuest?.QuestName ?? "null"}");
-                        }
-
-                        // If offeredQuest is null, continue to avoid null reference errors
-                        if (offeredQuest == null)
-                            continue;
-                    }
-                    else
-                    {
-                        // Quest is unique, we can proceed
-                        foundUniqueQuest = true;
-                    }
-                }
+                ShowFailGetQuestMessage();
+                Debug.Log("ShowFailGetQuestMessage (no unique quest)");
+                return;
             }
 
-            if (offeredQuest != null)
+            // Second: If nearby quest preference is enabled, run the nearby search loop.
+            if (QuestOfferLocationsMod.preferNearbyQuests)
             {
-                if (QuestOfferLocationsMod.preferNearbyQuests)
-                {
-                    NearestQuest = null;
+                offeredQuest = FindNearbyQuest(offeredQuest, factionId, npcKey);
+            }
 
-                    IGuild guild = guildManager.GetGuild(guildGroup);
-                    int rep = guild.GetReputation(playerEntity);
-                    int factionId = offeredQuest.FactionId;
-
-                    timeStart = System.DateTime.Now;
-                    bool found = false;
-                    while (!found)
-                    {
-                        // Timeout to fallback on nearest quest
-                        if (System.DateTime.Now.Subtract(timeStart).TotalSeconds >= QuestOfferLocationsMod.maxSearchTimeInSeconds)
-                        {
-                            found = true;
-                            offeredQuest = NearestQuest?.Quest;
-                            break;
-                        }
-
-                        if (offeredQuest == null)
-                        {
-                            continue;
-                        }
-
-                        var farthestTravelTimeInDays = 0.0f;
-                        var questPlaces = offeredQuest.GetAllResources(typeof(Questing.Place));
-                        foreach (Questing.Place questPlace in questPlaces)
-                        {
-                            DFLocation location;
-                            DaggerfallUnity.Instance.ContentReader.GetLocation(questPlace.SiteDetails.regionName, questPlace.SiteDetails.locationName, out location);
-
-                            var travelTimeDays = QuestOfferMessageHelper.GetTravelTimeToLocation(location);
-
-                            if (travelTimeDays > farthestTravelTimeInDays)
-                            {
-                                farthestTravelTimeInDays = travelTimeDays;
-                            }
-                        }
-
-                        if (farthestTravelTimeInDays > QuestOfferLocationsMod.maxTravelDistanceInDays)
-                        {
-                            if (NearestQuest == null || NearestQuest.TimeToTravelToQuestInDays > farthestTravelTimeInDays)
-                            {
-                                NearestQuest = new NearestQuest
-                                {
-                                    Quest = offeredQuest,
-                                    TimeToTravelToQuestInDays = farthestTravelTimeInDays
-                                };
-                            }
-
-                            if (DaggerfallUnity.Settings.GuildQuestListBox)
-                            {
-                                offeredQuest = GameManager.Instance.QuestListsManager.LoadQuest(questPool[SelectedIndex], factionId);
-                            }
-                            else
-                            {
-                                if (QuestOfferLocationsMod.avoidRepeatingGuildQuests)
-                                {
-                                    while (!foundUniqueQuest)
-                                    {
-                                        // Check timeout
-                                        if (System.DateTime.Now.Subtract(timeStart).TotalSeconds >= QuestOfferLocationsMod.maxSearchTimeInSeconds)
-                                        {
-                                            ShowFailGetQuestMessage();
-                                            Debug.Log("ShowFailGetQuestMessage 2");
-                                            SetQuestOffersForNPC(serviceNPC, maxQuestsForLocation);
-                                            return;
-                                        }
-
-                                        // Check if offeredQuest is already on the list of previously offered quests
-                                        if (npcQuestOfferNames.TryGetValue(npcKey, out var offeredQuestNames) && offeredQuestNames.Contains(offeredQuest.QuestName))
-                                        {
-                                            // Request a new quest
-                                            if (DaggerfallUnity.Settings.GuildQuestListBox)
-                                            {
-                                                offeredQuest = GameManager.Instance.QuestListsManager.LoadQuest(questPool[SelectedIndex], serviceNPC.Data.factionID);
-                                            }
-                                            else
-                                            {
-                                                offeredQuest = GameManager.Instance.QuestListsManager.GetGuildQuest(
-                                                    guildGroup,
-                                                    guildManager.GetGuild(guildGroup).IsMember() ? Questing.MembershipStatus.Member : Questing.MembershipStatus.Nonmember,
-                                                    guildManager.GetGuild(guildGroup).GetFactionId(),
-                                                    guildManager.GetGuild(guildGroup).GetReputation(playerEntity),
-                                                    guildManager.GetGuild(guildGroup).Rank
-                                                );
-                                                Debug.Log($"New offered quest candidate in foundUniqueQuest loop: {offeredQuest?.QuestName ?? "null"}");
-                                            }
-
-                                            // If offeredQuest is null, continue to avoid null reference errors
-                                            if (offeredQuest == null)
-                                                continue;
-                                        }
-                                        else
-                                        {
-                                            // Quest is unique, we can proceed
-                                            foundUniqueQuest = true;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (offeredQuest == null)
-                {
-                    ShowFailGetQuestMessage();
-                    Debug.Log("ShowFailGetQuestMessage 3");
-                }
-                else
-                {
-                    // Offer the quest to player, setting external context provider to guild if a member
-                    if (guildManager.GetGuild(guildGroup).IsMember())
-                        offeredQuest.ExternalMCP = guildManager.GetGuild(guildGroup);
-
-                    DaggerfallMessageBox messageBox = QuestOfferMessageHelper.CreateQuestOffer(offeredQuest);
-                    if (messageBox != null)
-                    {
-                        messageBox.OnButtonClick += OfferQuest_OnButtonClick;
-                        messageBox.Show();
-                    }
-
-                    // Increment and save quest offers
-                    SetQuestOffersForNPC(serviceNPC, questOffers + 1);
-
-                    // Add the final offered quest name to the list
-                    if (!npcQuestOfferNames.ContainsKey(npcKey))
-                    {
-                        npcQuestOfferNames[npcKey] = new List<string>();
-                    }
-                    npcQuestOfferNames[npcKey].Add(offeredQuest.QuestName);
-
-                    // **Record the date of this quest offer**
-                    int currentDay = DaggerfallUnity.Instance.WorldTime.Now.DayOfYear;
-                    int currentYear = DaggerfallUnity.Instance.WorldTime.Now.Year;
-                    npcLastQuestOfferDate[npcKey] = (currentDay, currentYear);
-
-                    // Debug message showing the recorded date
-                    Debug.Log($"NPC {npcKey} last offered a quest on day {currentDay} of year {currentYear}.");
-
-
-                    // Debug message listing all quest names offered by this NPC
-                    string offeredQuestList = string.Join(", ", npcQuestOfferNames[npcKey]);
-                    Debug.Log($"NPC {npcKey} has offered the following quests: {offeredQuestList}");
-                }
+            // If no quest is found, show a failure message.
+            if (offeredQuest == null)
+            {
+                ShowFailGetQuestMessage();
+                Debug.Log("ShowFailGetQuestMessage (after nearby quest search)");
+                return;
             }
             else
             {
-                ShowFailGetQuestMessage();
-                Debug.Log("ShowFailGetQuestMessage 4");
+                // Set external context if the NPC is a guild member.
+                IGuild guild = guildManager.GetGuild(guildGroup);
+                if (guild.IsMember())
+                    offeredQuest.ExternalMCP = guild;
+
+                // Create the quest offer message box.
+                DaggerfallMessageBox messageBox = QuestOfferMessageHelper.CreateQuestOffer(offeredQuest);
+                if (messageBox != null)
+                {
+                    messageBox.OnButtonClick += OfferQuest_OnButtonClick;
+                    messageBox.Show();
+                }
+
+                // Increment and store quest offers.
+                SetQuestOffersForNPC(serviceNPC, questOffers + 1);
+
+                // Add the quest name to the list of offered quests.
+                if (!npcQuestOfferNames.ContainsKey(npcKey))
+                    npcQuestOfferNames[npcKey] = new List<string>();
+                npcQuestOfferNames[npcKey].Add(offeredQuest.QuestName);
+
+                // Record the date of this quest offer.
+                int currentDay = DaggerfallUnity.Instance.WorldTime.Now.DayOfYear;
+                int currentYear = DaggerfallUnity.Instance.WorldTime.Now.Year;
+                npcLastQuestOfferDate[npcKey] = (currentDay, currentYear);
+
+                Debug.Log($"NPC {npcKey} last offered a quest on day {currentDay} of year {currentYear}.");
+                string offeredQuestList = string.Join(", ", npcQuestOfferNames[npcKey]);
+                Debug.Log($"NPC {npcKey} has offered the following quests: {offeredQuestList}");
             }
+
+            // Finally, clear the quest pool.
             questPool.Clear();
+        }
+
+        /// <summary>
+        /// Ensure that the candidate quest is unique for the NPC.
+        /// If it's not unique, re-request a new candidate (up to the timeout).
+        /// </summary>
+        private Quest EnsureUniqueQuest(Quest candidate, int factionId, int npcKey, DateTime startTime, double maxSearchTimeInSeconds)
+        {
+            while (QuestOfferLocationsMod.avoidRepeatingGuildQuests &&
+                   npcQuestOfferNames.TryGetValue(npcKey, out var offeredNames) &&
+                   offeredNames.Contains(candidate.QuestName))
+            {
+                if (DateTime.Now.Subtract(startTime).TotalSeconds >= maxSearchTimeInSeconds)
+                {
+                    // We've exceeded the search time; return the current candidate even if it's not unique.
+                    return null;
+                }
+                candidate = RequestNewCandidate(factionId);
+                if (candidate == null)
+                    return null;
+            }
+            return candidate;
+        }
+
+        /// <summary>
+        /// Find a nearby quest by checking travel times.
+        /// It loops until the candidate quest is within the acceptable travel range,
+        /// or until the search times out (in which case it returns the best fallback candidate).
+        /// </summary>
+        private Quest FindNearbyQuest(Quest initialQuest, int factionId, int npcKey)
+        {
+            Quest candidate = initialQuest;
+            NearestQuest fallbackCandidate = null;
+            DateTime searchStart = DateTime.Now;
+
+            while (true)
+            {
+                if (candidate == null)
+                    break;
+
+                // Compute the farthest travel time among all quest locations.
+                float farthestTravelTimeInDays = 0.0f;
+                var questPlaces = candidate.GetAllResources(typeof(Questing.Place));
+                foreach (Questing.Place questPlace in questPlaces)
+                {
+                    DFLocation location;
+                    DaggerfallUnity.Instance.ContentReader.GetLocation(questPlace.SiteDetails.regionName, questPlace.SiteDetails.locationName, out location);
+                    float travelTimeDays = QuestOfferMessageHelper.GetTravelTimeToLocation(location);
+                    if (travelTimeDays > farthestTravelTimeInDays)
+                        farthestTravelTimeInDays = travelTimeDays;
+                }
+
+                // If travel time is acceptable, return this candidate.
+                if (farthestTravelTimeInDays <= QuestOfferLocationsMod.maxTravelDistanceInDays)
+                {
+                    return candidate;
+                }
+                else
+                {
+                    // Save this candidate as a fallback if it's better than previous ones.
+                    if (fallbackCandidate == null || farthestTravelTimeInDays < fallbackCandidate.TimeToTravelToQuestInDays)
+                    {
+                        fallbackCandidate = new NearestQuest
+                        {
+                            Quest = candidate,
+                            TimeToTravelToQuestInDays = farthestTravelTimeInDays
+                        };
+                    }
+                    // Request a new candidate and ensure it is unique.
+                    candidate = RequestNewCandidate(factionId);
+                    candidate = EnsureUniqueQuest(candidate, factionId, npcKey, searchStart, QuestOfferLocationsMod.maxSearchTimeInSeconds);
+                }
+
+                // If we have exceeded our maximum search time, return the best fallback.
+                if (DateTime.Now.Subtract(searchStart).TotalSeconds >= QuestOfferLocationsMod.maxSearchTimeInSeconds)
+                {
+                    return fallbackCandidate?.Quest;
+                }
+            }
+
+            return fallbackCandidate?.Quest;
+        }
+
+        /// <summary>
+        /// Requests a new quest candidate using the proper method based on settings.
+        /// </summary>
+        private Quest RequestNewCandidate(int factionId)
+        {
+            if (DaggerfallUnity.Settings.GuildQuestListBox)
+            {
+                return GameManager.Instance.QuestListsManager.LoadQuest(questPool[SelectedIndex], factionId);
+            }
+            else
+            {
+                return GameManager.Instance.QuestListsManager.GetGuildQuest(
+                    guildGroup,
+                    guildManager.GetGuild(guildGroup).IsMember() ? Questing.MembershipStatus.Member : Questing.MembershipStatus.Nonmember,
+                    factionId,
+                    guildManager.GetGuild(guildGroup).GetReputation(playerEntity),
+                    guildManager.GetGuild(guildGroup).Rank
+                );
+            }
         }
 
         private int GetQuestOffersForNPC(StaticNPC npc)
         {
-            int npcKey = npc.Data.hash; // Use a unique identifier for the NPC
+            int npcKey = npc.Data.hash;
             int baseOffers = npcQuestOffers.TryGetValue(npcKey, out int offers) ? offers : 0;
-
-            // Retrieve the last offer date
             if (npcLastQuestOfferDate.TryGetValue(npcKey, out var lastOfferDate))
             {
                 int lastDay = lastOfferDate.day;
                 int lastYear = lastOfferDate.year;
-
-                // Calculate weeks since the last quest offer
                 int currentDay = DaggerfallUnity.Instance.WorldTime.Now.DayOfYear;
                 int currentYear = DaggerfallUnity.Instance.WorldTime.Now.Year;
-
                 int daysElapsed = (currentYear - lastYear) * DaggerfallDateTime.DaysPerYear + (currentDay - lastDay);
                 int monthsElapsed = Mathf.FloorToInt(daysElapsed / 30.0f);
-
-                // Reduce the number of offers by monthsElapsed, down to a minimum of zero
                 baseOffers = Mathf.Max(baseOffers - monthsElapsed, 0);
                 npcQuestOffers[npcKey] = baseOffers;
-
-                // Remove oldest quest names from the list as time passes
                 if (npcQuestOfferNames.TryGetValue(npcKey, out var offeredQuestNames) && monthsElapsed > 0)
                 {
                     int namesToRemove = Mathf.Min(monthsElapsed, offeredQuestNames.Count);
                     offeredQuestNames.RemoveRange(0, namesToRemove);
-
-                    // Update the dictionary with the pruned list
                     if (offeredQuestNames.Count == 0)
-                    {
-                        npcQuestOfferNames.Remove(npcKey); // Clean up if no quests remain
-                    }
+                        npcQuestOfferNames.Remove(npcKey);
                     else
-                    {
                         npcQuestOfferNames[npcKey] = offeredQuestNames;
-                    }
                 }
             }
-
             return baseOffers;
         }
 
         private void SetQuestOffersForNPC(StaticNPC npc, int offers)
         {
-            int npcKey = npc.Data.hash; // Use the same unique identifier
+            int npcKey = npc.Data.hash;
             npcQuestOffers[npcKey] = offers;
         }
 
@@ -319,39 +257,31 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             switch (playerGPS.CurrentLocationType)
             {
                 case DFRegion.LocationTypes.TownCity:
-                    return QuestOfferLocationsMod.limitCityQuests; // Maximum quests for TownCity
+                    return QuestOfferLocationsMod.limitCityQuests;
                 case DFRegion.LocationTypes.TownHamlet:
-                    return QuestOfferLocationsMod.limitTownQuests; // Maximum quests for TownHamlet
+                    return QuestOfferLocationsMod.limitTownQuests;
                 default:
-                    return QuestOfferLocationsMod.limitVillageQuests; // Default maximum for other locations
+                    return QuestOfferLocationsMod.limitVillageQuests;
             }
         }
 
         protected override void GettingQuestsBox_OnClose()
         {
-            // Create a new ListPickerWindow
             DaggerfallListPickerWindow questPicker = new DaggerfallListPickerWindow(uiManager, uiManager.TopWindow);
             questPicker.OnItemPicked += QuestPicker_OnItemPicked;
-
-            // Get the NPC key to filter previously invalid quests
             int npcKey = serviceNPC.Data.hash;
-
-            // Ensure a list exists for this NPC in the dictionary
             if (!npcInvalidQuestIndices.ContainsKey(npcKey))
                 npcInvalidQuestIndices[npcKey] = new List<int>();
 
-            // Determine the maximum number of quests based on LocationType
             int maxQuestsForLocation = GetMaxQuestsForLocation();
-
-            // Prepare a list of valid indices, adjusting for invalid indices
             List<int> validQuestIndices = new List<int>();
+
             for (int i = 0; i < questPool.Count; i++)
             {
                 if (!npcInvalidQuestIndices[npcKey].Contains(i))
                     validQuestIndices.Add(i);
             }
 
-            // If there are more valid quests than allowed, randomly exclude excess
             if (validQuestIndices.Count > maxQuestsForLocation)
             {
                 System.Random rng = new System.Random();
@@ -359,111 +289,87 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                     .OrderBy(x => rng.Next())
                     .Take(validQuestIndices.Count - maxQuestsForLocation)
                     .ToList();
-
-                // Add the excluded indices to npcInvalidQuestIndices for this NPC
                 npcInvalidQuestIndices[npcKey].AddRange(indicesToExclude);
             }
 
-            // Initialize the isVisible array to match the questPool size
             isVisible = new bool[questPool.Count];
-
-            // Prepare a list of indices to remove from the questPool in case of failures
             List<int> failures = new List<int>();
 
-            // Iterate through the questPool to populate the ListPickerWindow
             for (int i = 0; i < questPool.Count; i++)
             {
                 try
                 {
-                    // Skip quests that are invalid for this NPC
                     if (npcInvalidQuestIndices[npcKey].Contains(i))
                     {
-                        isVisible[i] = false; // Mark this quest as not visible
+                        isVisible[i] = false;
                         continue;
                     }
-
-                    // Retrieve the faction ID safely
                     int factionId = guildManager.GetGuild(guildGroup).GetFactionId();
-
-                    // Load the quest partially to get the human-readable name
                     Quest quest = GameManager.Instance.QuestListsManager.LoadQuest(questPool[i], factionId, true);
-
-                    // Add quest name to the ListBox
                     string displayName = quest.DisplayName;
                     string localizedDisplayName = QuestMachine.Instance.GetLocalizedQuestDisplayName(quest.QuestName);
                     if (!string.IsNullOrEmpty(localizedDisplayName))
                         displayName = localizedDisplayName;
-
                     questPicker.ListBox.AddItem(displayName ?? quest.QuestName);
-                    isVisible[i] = true; // Mark this quest as visible
+                    isVisible[i] = true;
                     quest.Dispose();
                 }
                 catch
                 {
-                    // Record failures to remove these quests from the questPool
                     failures.Add(i);
                 }
             }
 
-            // Remove any quests that failed partial parsing
             foreach (int i in failures)
             {
                 if (i >= 0 && i < questPool.Count)
                     questPool.RemoveAt(i);
             }
 
-            // Push the ListPickerWindow to the UI stack
+            // If no valid quests were added to the ListBox, show the failure message.
+            if (questPicker.ListBox.Count == 0)
+            {
+                Debug.Log("QuestPicker is empty - no valid quests to show.");
+                ShowFailGetQuestMessage();
+                return;
+            }
+
             uiManager.PushWindow(questPicker);
         }
 
-
-
         protected override void QuestPicker_OnItemPicked(int visibleIndex, string name)
         {
-            // Debugging output for isVisible array and visibleIndex
             Debug.Log($"isVisible array: {string.Join(", ", isVisible)}");
             Debug.Log($"Visible index selected: {visibleIndex}");
-
-            // Find the adjusted index in questPool
             int adjustedIndex = -1;
             int visibleCount = 0;
-
             for (int i = 0; i < isVisible.Length; i++)
             {
-                if (isVisible[i]) // Count only visible entries
+                if (isVisible[i])
                 {
                     if (visibleCount == visibleIndex)
                     {
-                        adjustedIndex = i; // Found the corresponding questPool index
+                        adjustedIndex = i;
                         break;
                     }
                     visibleCount++;
                 }
             }
-
-            // Check if we failed to find the adjusted index
             if (adjustedIndex == -1)
             {
                 Debug.LogError($"Failed to find adjusted index for visible index {visibleIndex}. isVisible array: {string.Join(", ", isVisible)}");
                 ShowFailGetQuestMessage();
                 return;
             }
-
-            // Add the adjusted index to invalid indices for this NPC
             int npcKey = serviceNPC.Data.hash;
             if (!npcInvalidQuestIndices.ContainsKey(npcKey))
                 npcInvalidQuestIndices[npcKey] = new List<int>();
-
             if (!npcInvalidQuestIndices[npcKey].Contains(adjustedIndex))
                 npcInvalidQuestIndices[npcKey].Add(adjustedIndex);
-
-            // Load the quest using the adjusted index
             int factionId = guildManager.GetGuild(guildGroup).GetFactionId();
             offeredQuest = GameManager.Instance.QuestListsManager.LoadQuest(questPool[adjustedIndex], factionId);
-
             DaggerfallUI.Instance.PlayOneShot(SoundClips.ButtonClick);
             DaggerfallUI.UIManager.PopWindow();
-
             if (offeredQuest != null)
             {
                 SelectedIndex = adjustedIndex;
@@ -477,4 +383,3 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         }
     }
 }
-
