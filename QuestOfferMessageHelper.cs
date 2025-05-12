@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 namespace Assets.Scripts.Game.MacadaynuMods.QuestOfferLocations
@@ -91,40 +92,47 @@ namespace Assets.Scripts.Game.MacadaynuMods.QuestOfferLocations
 
         private static Place GetLastPlaceMentionedInMessage(Message message)
         {
-            QuestMacroHelper helper = new QuestMacroHelper();
-            QuestResource[] resources = helper.GetMessageResources(message);
-            Debug.Log($"[QOL] GetMessageResources returned {resources?.Length ?? 0} resources.");
+            if (message == null)
+                return null;
 
-            if (resources != null)
+            // Grab the raw tokens (no macro expansion) so we still see the underscores
+            var rawTokens = message.GetTextTokens(variant: -1, expandMacros: false);
+
+            // Regex to catch both NameMacro3 and NameMacro4: ___Foo_ or ____Foo_
+            var rePlace = new Regex(@"_{3,4}([A-Za-z0-9\.]+)_");
+
+            Place lastPlace = null;
+
+            foreach (var token in rawTokens)
             {
-                for (int i = 0; i < resources.Length; i++)
+                // Split on spaces—same as QuestMacroHelper.GetWords
+                foreach (var word in token.text.Split(' '))
                 {
-                    QuestResource resource = resources[i];
-                    // Check resource types and log key properties
-                    if (resource is Person person)
+                    var m = rePlace.Match(word);
+                    if (!m.Success)
+                        continue;
+
+                    // symbol inside the underscores
+                    string symbol = m.Groups[1].Value;
+
+                    // Look up the quest resource by name
+                    var resource = message.ParentQuest.GetResource(symbol);
+                    if (resource is Place p)
                     {
-                        //Debug.Log($"[QOL] Resource[{i}]: Type = Person, DisplayName = {person.DisplayName}");
+                        // explicit Place resource mentioned
+                        lastPlace = p;
                     }
-                    else if (resource is Place place)
+                    else if (resource is Person person)
                     {
-                        //Debug.Log($"[QOL] Resource[{i}]: Type = Place, LocationName = {place.SiteDetails.locationName}, Region = {place.SiteDetails.regionName}");
-                    }
-                    else
-                    {
-                        //Debug.Log($"[QOL] Resource[{i}]: Type = {resource.GetType().Name}, ToString = {resource.ToString()}");
+                        // place‐style macro on a Person means "town name" or "region name" macro
+                        // so pull their dialog‐place (or home‐place) out
+                        var dialogPlace = person.GetDialogPlace() ?? person.GetHomePlace();
+                        if (dialogPlace != null)
+                            lastPlace = dialogPlace;
                     }
                 }
             }
-            else
-            {
-                Debug.Log("[QOL] GetMessageResources returned null.");
-            }
 
-            Place lastPlace = GetLastPlaceInResources(resources);
-            //if (lastPlace != null)
-                //Debug.Log($"[QOL] GetLastPlaceMentionedInMessage selected Place: LocationName = {lastPlace.SiteDetails.locationName}, Region = {lastPlace.SiteDetails.regionName}");
-            //else
-                //Debug.Log("[QOL] GetLastPlaceMentionedInMessage did not find any Place resource.");
             return lastPlace;
         }
 

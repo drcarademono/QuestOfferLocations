@@ -54,7 +54,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
             // NPC keys used for tracking unique quests.
             int factionId = serviceNPC.Data.factionID;
-            int npcKey = serviceNPC.Data.hash;
+            int npcKey = serviceNPC.Data.nameSeed;
 
             // First: Ensure the quest is unique (if configured).
             DateTime uniquenessStart = DateTime.Now;
@@ -220,7 +220,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         private int GetQuestOffersForNPC(StaticNPC npc)
         {
-            int npcKey = npc.Data.hash;
+            int npcKey = npc.Data.nameSeed;
             int baseOffers = npcQuestOffers.TryGetValue(npcKey, out int offers) ? offers : 0;
             if (npcLastQuestOfferDate.TryGetValue(npcKey, out var lastOfferDate))
             {
@@ -247,7 +247,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         private void SetQuestOffersForNPC(StaticNPC npc, int offers)
         {
-            int npcKey = npc.Data.hash;
+            int npcKey = npc.Data.nameSeed;
             npcQuestOffers[npcKey] = offers;
         }
 
@@ -269,7 +269,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         {
             DaggerfallListPickerWindow questPicker = new DaggerfallListPickerWindow(uiManager, uiManager.TopWindow);
             questPicker.OnItemPicked += QuestPicker_OnItemPicked;
-            int npcKey = serviceNPC.Data.hash;
+            int npcKey = serviceNPC.Data.nameSeed;
             if (!npcInvalidQuestIndices.ContainsKey(npcKey))
                 npcInvalidQuestIndices[npcKey] = new List<int>();
 
@@ -282,7 +282,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                     validQuestIndices.Add(i);
             }
 
-            if (validQuestIndices.Count > maxQuestsForLocation)
+            if (QuestOfferLocationsMod.limitGuildQuestions && validQuestIndices.Count > maxQuestsForLocation)
             {
                 System.Random rng = new System.Random();
                 var indicesToExclude = validQuestIndices
@@ -299,7 +299,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             {
                 try
                 {
-                    if (npcInvalidQuestIndices[npcKey].Contains(i))
+                    if (QuestOfferLocationsMod.avoidRepeatingGuildQuests && npcInvalidQuestIndices[npcKey].Contains(i))
                     {
                         isVisible[i] = false;
                         continue;
@@ -361,7 +361,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 ShowFailGetQuestMessage();
                 return;
             }
-            int npcKey = serviceNPC.Data.hash;
+            int npcKey = serviceNPC.Data.nameSeed;
             if (!npcInvalidQuestIndices.ContainsKey(npcKey))
                 npcInvalidQuestIndices[npcKey] = new List<int>();
             if (!npcInvalidQuestIndices[npcKey].Contains(adjustedIndex))
