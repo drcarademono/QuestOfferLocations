@@ -56,6 +56,14 @@ namespace Assets.Scripts.Game.MacadaynuMods.QuestOfferLocations
                 tokens.Add(TextFile.CreateFormatToken(TextFile.Formatting.JustifyCenter));
             }
 
+            //if (place == null)
+            //{
+                //tokens.Add(TextFile.CreateFormatToken(TextFile.Formatting.NewLine));
+
+                //tokens.Add(TextFile.CreateTextToken("You will need to ask around for directions."));
+                //tokens.Add(TextFile.CreateFormatToken(TextFile.Formatting.JustifyCenter));
+            //}
+
             var textTokens = tokens.ToArray();
 
             DaggerfallMessageBox messageBox = new DaggerfallMessageBox(DaggerfallUI.UIManager, DaggerfallMessageBox.CommonMessageBoxButtons.YesNo, textTokens);
@@ -95,6 +103,23 @@ namespace Assets.Scripts.Game.MacadaynuMods.QuestOfferLocations
             if (message == null)
                 return null;
 
+            QuestMacroHelper helper = new QuestMacroHelper();
+            QuestResource[] resources = helper.GetMessageResources(message);
+            Debug.Log($"[QOL] GetMessageResources returned {resources?.Length ?? 0} resources.");
+
+            // 1) Try any explicit Place resource first
+            if (resources != null)
+            {
+                Place explicitPlace = GetLastPlaceInResources(resources);
+                if (explicitPlace != null)
+                    return explicitPlace;
+            }
+            else
+            {
+                Debug.Log("[QOL] GetMessageResources returned null.");
+            }
+
+            // No Place resource in quest, fallback to Person resource
             // Grab the raw tokens (no macro expansion) so we still see the underscores
             var rawTokens = message.GetTextTokens(variant: -1, expandMacros: false);
 

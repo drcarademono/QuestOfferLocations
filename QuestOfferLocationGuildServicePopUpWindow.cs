@@ -154,44 +154,57 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 if (candidate == null)
                     break;
 
-                // Compute the farthest travel time among all quest locations.
-                float farthestTravelTimeInDays = 0.0f;
-                var questPlaces = candidate.GetAllResources(typeof(Questing.Place));
-                foreach (Questing.Place questPlace in questPlaces)
+                // 1) Gather all places: explicit + person‑derived
+                var places = new List<Questing.Place>();
+                // explicit Place resources
+                places.AddRange(candidate.GetAllResources(typeof(Questing.Place))
+                                        .OfType<Questing.Place>());
+
+                // any Person resources -> their dialog/home place
+                foreach (var person in candidate.GetAllResources(typeof(Person)).OfType<Person>())
+                {
+                    var dialogPlace = person.GetDialogPlace() ?? person.GetHomePlace();
+                    if (dialogPlace != null)
+                        places.Add(dialogPlace);
+                }
+
+                // 2) Compute farthest travel time among all
+                float farthestTravelTimeInDays = 0f;
+                foreach (var questPlace in places)
                 {
                     DFLocation location;
-                    DaggerfallUnity.Instance.ContentReader.GetLocation(questPlace.SiteDetails.regionName, questPlace.SiteDetails.locationName, out location);
+                    DaggerfallUnity.Instance.ContentReader
+                        .GetLocation(
+                            questPlace.SiteDetails.regionName,
+                            questPlace.SiteDetails.locationName,
+                            out location);
+
                     float travelTimeDays = QuestOfferMessageHelper.GetTravelTimeToLocation(location);
                     if (travelTimeDays > farthestTravelTimeInDays)
                         farthestTravelTimeInDays = travelTimeDays;
                 }
 
-                // If travel time is acceptable, return this candidate.
+                // 3) If within range, accept this quest
                 if (farthestTravelTimeInDays <= QuestOfferLocationsMod.maxTravelDistanceInDays)
-                {
                     return candidate;
-                }
-                else
+
+                // 4) Otherwise consider it for fallback and get a new one
+                if (fallbackCandidate == null
+                    || farthestTravelTimeInDays < fallbackCandidate.TimeToTravelToQuestInDays)
                 {
-                    // Save this candidate as a fallback if it's better than previous ones.
-                    if (fallbackCandidate == null || farthestTravelTimeInDays < fallbackCandidate.TimeToTravelToQuestInDays)
+                    fallbackCandidate = new NearestQuest
                     {
-                        fallbackCandidate = new NearestQuest
-                        {
-                            Quest = candidate,
-                            TimeToTravelToQuestInDays = farthestTravelTimeInDays
-                        };
-                    }
-                    // Request a new candidate and ensure it is unique.
-                    candidate = RequestNewCandidate(factionId);
-                    candidate = EnsureUniqueQuest(candidate, factionId, npcKey, searchStart, QuestOfferLocationsMod.maxSearchTimeInSeconds);
+                        Quest = candidate,
+                        TimeToTravelToQuestInDays = farthestTravelTimeInDays
+                    };
                 }
 
-                // If we have exceeded our maximum search time, return the best fallback.
-                if (DateTime.Now.Subtract(searchStart).TotalSeconds >= QuestOfferLocationsMod.maxSearchTimeInSeconds)
-                {
+                candidate = RequestNewCandidate(factionId);
+                candidate = EnsureUniqueQuest(candidate, factionId, npcKey, searchStart, QuestOfferLocationsMod.maxSearchTimeInSeconds);
+
+                // 5) Timeout?
+                if ((DateTime.Now - searchStart).TotalSeconds >= QuestOfferLocationsMod.maxSearchTimeInSeconds)
                     return fallbackCandidate?.Quest;
-                }
             }
 
             return fallbackCandidate?.Quest;

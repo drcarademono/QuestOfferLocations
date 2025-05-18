@@ -6,6 +6,8 @@ using DaggerfallWorkshop.Game.Entity;
 using Assets.Scripts.Game.MacadaynuMods.QuestOfferLocations;
 using DaggerfallConnect;
 using Assets.Scripts.Game.UserInterfaceWindows;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 {
@@ -82,14 +84,26 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                     }
                     else
                     {
-                        var farthestTravelTimeInDays = 0.0f;
-                        var questPlaces = offeredQuest.GetAllResources(typeof(Place));
-                        foreach (Place questPlace in questPlaces)
+                        var places = new List<Place>();
+                        places.AddRange(offeredQuest
+                            .GetAllResources(typeof(Place))
+                            .OfType<Place>());
+                        foreach (Person person in offeredQuest
+                            .GetAllResources(typeof(Person))
+                            .OfType<Person>())
+                        {
+                            var dialogPlace = person.GetDialogPlace() ?? person.GetHomePlace();
+                            if (dialogPlace != null)
+                                places.Add(dialogPlace);
+                        }
+
+                        float farthestTravelTimeInDays = 0.0f;
+                        foreach (Place questPlace in places)
                         {
                             DFLocation location;
                             DaggerfallUnity.Instance.ContentReader.GetLocation(questPlace.SiteDetails.regionName, questPlace.SiteDetails.locationName, out location);
 
-                            var travelTimeDays = QuestOfferMessageHelper.GetTravelTimeToLocation(location);
+                            float travelTimeDays = QuestOfferMessageHelper.GetTravelTimeToLocation(location);
 
                             if (travelTimeDays > farthestTravelTimeInDays)
                             {
@@ -101,6 +115,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                         {
                             // Store the nearest quest in the loop as a fallback
                             if (NearestQuest == null || NearestQuest.TimeToTravelToQuestInDays > farthestTravelTimeInDays)
+
                             {
                                 NearestQuest = new NearestQuest
                                 {
