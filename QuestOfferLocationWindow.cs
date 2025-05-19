@@ -48,7 +48,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             int level = GameManager.Instance.PlayerEntity.Level;
 
             // Also get a unique key for this NPC (using the NPC's hash)
-            int npcKey = questorNPC.hash;
+            int npcKey = questorNPC.nameSeed;
 
             // Set up the initial offered quest using the correct factionId.
             offeredQuest = GameManager.Instance.QuestListsManager.GetSocialQuest(socialGroup, factionId, gender, reputation, level);
