@@ -53,7 +53,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             }
 
             // NPC keys used for tracking unique quests.
-            int factionId = serviceNPC.Data.factionID;
+            int factionId = offeredQuest.FactionId;
             int npcKey = serviceNPC.Data.nameSeed;
 
             // First: Ensure the quest is unique (if configured).
@@ -105,7 +105,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 // Record the date of this quest offer.
                 int currentDay = DaggerfallUnity.Instance.WorldTime.Now.DayOfYear;
                 int currentYear = DaggerfallUnity.Instance.WorldTime.Now.Year;
-                npcLastQuestOfferDate[npcKey] = (currentDay, currentYear);
+                if (!npcLastQuestOfferDate.ContainsKey(npcKey))
+                    npcLastQuestOfferDate[npcKey] = (currentDay, currentYear);
 
                 //Debug.Log($"[QOL] NPC {npcKey} last offered a quest on day {currentDay} of year {currentYear}.");
                 string offeredQuestList = string.Join(", ", npcQuestOfferNames[npcKey]);
@@ -235,26 +236,45 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         {
             int npcKey = npc.Data.nameSeed;
             int baseOffers = npcQuestOffers.TryGetValue(npcKey, out int offers) ? offers : 0;
+
             if (npcLastQuestOfferDate.TryGetValue(npcKey, out var lastOfferDate))
             {
                 int lastDay = lastOfferDate.day;
                 int lastYear = lastOfferDate.year;
                 int currentDay = DaggerfallUnity.Instance.WorldTime.Now.DayOfYear;
                 int currentYear = DaggerfallUnity.Instance.WorldTime.Now.Year;
+
                 int daysElapsed = (currentYear - lastYear) * DaggerfallDateTime.DaysPerYear + (currentDay - lastDay);
                 int monthsElapsed = Mathf.FloorToInt(daysElapsed / 30.0f);
-                baseOffers = Mathf.Max(baseOffers - monthsElapsed, 0);
-                npcQuestOffers[npcKey] = baseOffers;
-                if (npcQuestOfferNames.TryGetValue(npcKey, out var offeredQuestNames) && monthsElapsed > 0)
+
+                if (monthsElapsed > 0)
                 {
-                    int namesToRemove = Mathf.Min(monthsElapsed, offeredQuestNames.Count);
-                    offeredQuestNames.RemoveRange(0, namesToRemove);
-                    if (offeredQuestNames.Count == 0)
-                        npcQuestOfferNames.Remove(npcKey);
-                    else
-                        npcQuestOfferNames[npcKey] = offeredQuestNames;
+                    // Subtract one quest per month passed
+                    baseOffers = Mathf.Max(baseOffers - monthsElapsed, 0);
+                    npcQuestOffers[npcKey] = baseOffers;
+
+                    // Prune old names as before
+                    if (npcQuestOfferNames.TryGetValue(npcKey, out var offeredQuestNames))
+                    {
+                        int namesToRemove = Mathf.Min(monthsElapsed, offeredQuestNames.Count);
+                        offeredQuestNames.RemoveRange(0, namesToRemove);
+                        if (offeredQuestNames.Count == 0)
+                            npcQuestOfferNames.Remove(npcKey);
+                    }
+
+                    // Decay invalid‐picker indices by one per month
+                    if (npcInvalidQuestIndices.TryGetValue(npcKey, out var invalidList))
+                    {
+                        int removeCount = Math.Min(monthsElapsed, invalidList.Count);
+                        invalidList.RemoveRange(0, removeCount);
+                        if (invalidList.Count == 0)
+                            npcInvalidQuestIndices.Remove(npcKey);
+                    }
+
+                    npcLastQuestOfferDate[npcKey] = (currentDay, currentYear);
                 }
             }
+
             return baseOffers;
         }
 
@@ -280,6 +300,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         protected override void GettingQuestsBox_OnClose()
         {
+            GetQuestOffersForNPC(serviceNPC);
+
             DaggerfallListPickerWindow questPicker = new DaggerfallListPickerWindow(uiManager, uiManager.TopWindow);
             questPicker.OnItemPicked += QuestPicker_OnItemPicked;
             int npcKey = serviceNPC.Data.nameSeed;
@@ -312,7 +334,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             {
                 try
                 {
-                    if (QuestOfferLocationsMod.avoidRepeatingGuildQuests && npcInvalidQuestIndices[npcKey].Contains(i))
+                    if (npcInvalidQuestIndices[npcKey].Contains(i))
                     {
                         isVisible[i] = false;
                         continue;
